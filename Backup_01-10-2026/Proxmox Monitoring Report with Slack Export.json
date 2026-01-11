@@ -1,0 +1,612 @@
+{
+  "updatedAt": "2026-01-10T22:59:53.019Z",
+  "createdAt": "2025-12-28T03:45:57.367Z",
+  "id": "24gjbFgEvBGtGSeC",
+  "name": "Proxmox Monitoring Report with Slack Export",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "var1",
+              "name": "PROXMOX_IP",
+              "type": "string",
+              "value": "172.16.0.26"
+            },
+            {
+              "id": "var2",
+              "name": "PROXMOX_PORT",
+              "type": "string",
+              "value": "8006"
+            },
+            {
+              "id": "var3",
+              "name": "PROXMOX_NODE",
+              "type": "string",
+              "value": "H-ProxMox-SRV"
+            },
+            {
+              "id": "var4",
+              "name": "Slack_CHANNEL_ID",
+              "type": "string",
+              "value": "#max"
+            },
+            {
+              "id": "var5",
+              "name": "PROXMOX_USER",
+              "type": "string",
+              "value": "root@pam"
+            },
+            {
+              "id": "var6",
+              "name": "PROXMOX_PASSWORD",
+              "type": "string",
+              "value": "5NbUJxG6"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "eb602292-db17-472c-9455-3d368c1b0639",
+      "name": "Set Variables",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -2800,
+        -224
+      ],
+      "typeVersion": 3.3
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://{{ $json.PROXMOX_IP }}:{{ $json.PROXMOX_PORT }}/api2/json/access/ticket",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "username",
+              "value": "={{ $json.PROXMOX_USER }}"
+            },
+            {
+              "name": "password",
+              "value": "={{ $json.PROXMOX_PASSWORD }}"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "484557c0-2486-49ed-b673-726d1b7b1270",
+      "name": "Proxmox Login",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -2576,
+        -224
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ticket",
+              "name": "ticket",
+              "type": "string",
+              "value": "={{ $json.data.ticket }}"
+            },
+            {
+              "id": "csrf",
+              "name": "csrf",
+              "type": "string",
+              "value": "={{ $json.data.CSRFPreventionToken }}"
+            },
+            {
+              "id": "ip",
+              "name": "PROXMOX_IP",
+              "type": "string",
+              "value": "={{ $('Set Variables').item.json.PROXMOX_IP }}"
+            },
+            {
+              "id": "port",
+              "name": "PROXMOX_PORT",
+              "type": "string",
+              "value": "={{ $('Set Variables').item.json.PROXMOX_PORT }}"
+            },
+            {
+              "id": "node",
+              "name": "PROXMOX_NODE",
+              "type": "string",
+              "value": "={{ $('Set Variables').item.json.PROXMOX_NODE }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a8398901-3516-4fd4-b2da-24c018d63f66",
+      "name": "Prepare Auth",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -2352,
+        -224
+      ],
+      "typeVersion": 3.3
+    },
+    {
+      "parameters": {
+        "url": "=https://{{ $json.PROXMOX_IP }}:{{ $json.PROXMOX_PORT }}/api2/json/nodes/{{ $json.PROXMOX_NODE }}/qemu",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "=PVEAuthCookie={{ $json.ticket }}"
+            },
+            {
+              "name": "CSRFPreventionToken",
+              "value": "={{ $json.csrf }}"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "55fbd2f0-6598-43af-b055-99090a942161",
+      "name": "API - VM List",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -2128,
+        -448
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "=https://{{ $('Set Variables').item.json.PROXMOX_IP }}:{{ $('Set Variables').item.json.PROXMOX_PORT }}/api2/json/nodes/{{ $('Set Variables').item.json.PROXMOX_NODE }}/tasks?limit=100",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "=PVEAuthCookie={{ $('Prepare Auth').item.json.ticket }}"
+            },
+            {
+              "name": "CSRFPreventionToken",
+              "value": "={{ $json.csrf }}"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "1bbb6c0c-b90c-48b3-8768-3fd1eb416e36",
+      "name": "API - Node Tasks",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -2128,
+        -224
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "=https://{{ $('Set Variables').item.json.PROXMOX_IP }}:{{ $('Set Variables').item.json.PROXMOX_PORT }}/api2/json/nodes/{{ $('Set Variables').item.json.PROXMOX_NODE }}/status",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "=PVEAuthCookie={{ $('Prepare Auth').item.json.ticket }}"
+            },
+            {
+              "name": "CSRFPreventionToken",
+              "value": "={{ $json.csrf }}"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "55c3965f-2780-4e1f-9a29-7dc4a6d3f476",
+      "name": "API - Node Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -2128,
+        0
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "command": "=# Temperature sensors\nsensors 2>/dev/null | grep -E 'Package|Core' || echo 'No temperature data available'\n\n# Detailed uptime\nuptime"
+      },
+      "id": "6aab5473-5c19-4031-a1e8-3840065c3fa1",
+      "name": "SSH - Get Sensors",
+      "type": "n8n-nodes-base.ssh",
+      "position": [
+        -1824,
+        -224
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "sshPassword": {
+          "id": "m9LrkiPq0y8wgFLo",
+          "name": "SSH H-ProxMox-SRV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get data from previous nodes by name\nconst sshData = $input.first().json.stdout;\nconst vmData = $('API - VM List').first().json.data;\nconst nodeData = $('API - Node Status').first().json.data;\nconst tasksData = $('API - Node Tasks').first().json.data;\n\nif (!vmData) {\n  throw new Error('VM data not received from API - VM List node');\n}\nif (!nodeData) {\n  throw new Error('Node status data not received from API - Node Status node');\n}\nif (!tasksData) {\n  throw new Error('Tasks data not received from API - Node Tasks node');\n}\n\n// Parse SSH output for temperature\nconst sshLines = (sshData || '').split('\\n');\nconst tempLines = sshLines.filter(l => l.includes('Package') || l.includes('Core'));\n\nlet temperatureDisplay = 'No temperature data available';\nlet hasTempWarning = false;\n\nif (tempLines.length > 0) {\n  const tempData = [];\n  let hasHighTemp = false;\n  \n  for (const line of tempLines) {\n    const currentMatch = line.match(/([+\\-]?[0-9.]+)°C/);\n    const highMatch = line.match(/high\\s*=\\s*([+\\-]?[0-9.]+)°C/);\n    \n    if (currentMatch && highMatch) {\n      const current = parseFloat(currentMatch[1]);\n      const high = parseFloat(highMatch[1]);\n      const label = line.split(':')[0].trim();\n      \n      tempData.push({ label, current, high, line: line.trim() });\n      \n      if (current >= high) {\n        hasHighTemp = true;\n        hasTempWarning = true;\n      }\n    }\n  }\n  \n  if (hasHighTemp) {\n    temperatureDisplay = tempData.map(t => t.line).join('\\n');\n  } else {\n    const avgTemp = (tempData.reduce((sum, t) => sum + t.current, 0) / tempData.length).toFixed(1);\n    const maxTemp = Math.max(...tempData.map(t => t.current)).toFixed(1);\n    const minTemp = Math.min(...tempData.map(t => t.current)).toFixed(1);\n    temperatureDisplay = `Average: ${avgTemp}°C (Min: ${minTemp}°C, Max: ${maxTemp}°C)`;\n  }\n}\n\n// Parse uptime from SSH\nlet uptimeString = 'N/A';\nconst uptimeLine = sshLines.find(l => l.includes('up'));\nif (uptimeLine) {\n  uptimeString = uptimeLine.trim();\n}\n\n// VM statistics\nconst totalVMs = vmData.length;\nconst runningVMs = vmData.filter(vm => vm.status === 'running').length;\nconst stoppedVMs = totalVMs - runningVMs;\n\n// Find recently stopped VMs from task log\nconst now = Math.floor(Date.now() / 1000);\nconst fifteenMinutesAgo = now - 900;\n\nconst recentStopTasks = tasksData.filter(task => {\n  const isStopTask = task.type === 'qmstop' || task.type === 'qmshutdown';\n  const taskTime = task.starttime || task.endtime || 0;\n  return isStopTask && taskTime >= fifteenMinutesAgo;\n});\n\nconst recentlyStoppedVMs = recentStopTasks.map(task => {\n  let vmid = 'N/A';\n  vmid = task.id;\n  \n  const vm = vmData.find(v => String(v.vmid) === String(vmid));\n  const vmName = vm ? vm.name : 'Unknown';\n  \n  const taskTime = task.starttime || task.endtime || now;\n  const minutesAgo = Math.floor((now - taskTime) / 60);\n  \n  return {\n    id: vmid,\n    name: vmName,\n    minutesAgo: minutesAgo,\n    status: task.status || 'stopped'\n  };\n});\n\nconst recentlyStopped = recentlyStoppedVMs.length;\n\n// Node statistics from API\nconst cpuUsage = nodeData.cpu ? (nodeData.cpu * 100).toFixed(2) + '%' : 'N/A';\nconst memTotal = nodeData.memory ? (nodeData.memory.total / (1024**3)).toFixed(2) + ' GB' : 'N/A';\nconst memUsed = nodeData.memory ? (nodeData.memory.used / (1024**3)).toFixed(2) + ' GB' : 'N/A';\nconst memPercent = nodeData.memory ? ((nodeData.memory.used / nodeData.memory.total) * 100).toFixed(2) + '%' : 'N/A';\nconst uptimeSeconds = nodeData.uptime || 0;\nconst uptimeDays = Math.floor(uptimeSeconds / 86400);\nconst uptimeHours = Math.floor((uptimeSeconds % 86400) / 3600);\nconst uptimeFormatted = `${uptimeDays}d ${uptimeHours}h`;\n\nreturn {\n  timestamp: new Date().toISOString(),\n  vms: {\n    total: totalVMs,\n    running: runningVMs,\n    stopped: stoppedVMs,\n    recentlyStopped: recentlyStopped,\n    recentlyStoppedDetails: recentlyStoppedVMs\n  },\n  host: {\n    cpu: cpuUsage,\n    memoryUsed: memUsed,\n    memoryTotal: memTotal,\n    memoryPercent: memPercent,\n    uptime: uptimeFormatted,\n    uptimeDetailed: uptimeString,\n    temperature: temperatureDisplay,\n    tempWarning: hasTempWarning\n  }\n};"
+      },
+      "id": "b4ffbe20-9193-4894-9819-28f222066d4b",
+      "name": "Process Data",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -1600,
+        -336
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\n// Emojis for warnings\nconst tempEmoji = data.host.tempWarning ? '🔥 ' : '';\nconst recentStopEmoji = data.vms.recentlyStopped > 0 ? '⚠️ ' : '';\n\n// Recently stopped VMs section\nlet recentlyStoppedSection = '';\nif (data.vms.recentlyStopped > 0 && data.vms.recentlyStoppedDetails && data.vms.recentlyStoppedDetails.length > 0) {\n  const vmList = data.vms.recentlyStoppedDetails\n    .map(vm => `• VM ${vm.id} - ${vm.name} (${vm.minutesAgo} min ago)`)\n    .join('\\n');\n  recentlyStoppedSection = `${recentStopEmoji}Recently Stopped VMs:\\n${vmList}`;\n}\n\n// Slack Block Kit\nconst blocks = [\n  {\n    type: \"header\",\n    text: {\n      type: \"plain_text\",\n      text: \"Proxmox Monitoring Report\",\n      emoji: true\n    }\n  },\n  {\n    type: \"context\",\n    elements: [\n      { type: \"plain_text\", text: `Generated: ${new Date(data.timestamp).toLocaleString()}`, emoji: true }\n    ]\n  },\n  { type: \"divider\" },\n  {\n    type: \"section\",\n    fields: [\n      { type: \"mrkdwn\", text: `*VMs Total:* ${data.vms.total}` },\n      { type: \"mrkdwn\", text: `*Running:* ${data.vms.running} ✅` },\n      { type: \"mrkdwn\", text: `*Stopped:* ${data.vms.stopped} ⛔` },\n      { type: \"mrkdwn\", text: `*Recently Stopped:* ${data.vms.recentlyStopped} ${recentStopEmoji}` }\n    ]\n  },\n  recentlyStoppedSection ? {\n    type: \"section\",\n    text: { type: \"mrkdwn\", text: recentlyStoppedSection }\n  } : null,\n  { type: \"divider\" },\n  {\n    type: \"section\",\n    fields: [\n      { type: \"mrkdwn\", text: `*CPU Usage:* ${data.host.cpu}` },\n      { type: \"mrkdwn\", text: `*Memory:* ${data.host.memoryUsed} / ${data.host.memoryTotal} (${data.host.memoryPercent})` },\n      { type: \"mrkdwn\", text: `*Uptime:* ${data.host.uptime}` }\n    ]\n  },\n  { type: \"divider\" },\n  {\n    type: \"section\",\n    text: {\n      type: \"mrkdwn\",\n      text: `${tempEmoji}*Temperature:*\\n${data.host.temperature}`\n    }\n  },\n  { type: \"divider\" },\n  {\n    type: \"context\",\n    elements: [\n      { type: \"mrkdwn\", text: \"🔗 <https://{{ $json.PROXMOX_IP }}:{{ $json.PROXMOX_PORT }}/nodes/{{ $json.PROXMOX_NODE }}/qemu|Open Proxmox Console>\" }\n    ]\n  }\n].filter(Boolean); // Remove null blocks\n\n// Fallback text for clients that don’t support blocks\nconst fallbackText = `Proxmox Monitoring Report:\nVMs: ${data.vms.total} total, ${data.vms.running} running, ${data.vms.stopped} stopped\nRecently stopped: ${data.vms.recentlyStopped}\nCPU: ${data.host.cpu}, Memory: ${data.host.memoryUsed}/${data.host.memoryTotal} (${data.host.memoryPercent})\nUptime: ${data.host.uptime}\nTemperature: ${data.host.temperature}`;\n\nreturn { blocks, text: fallbackText };\n"
+      },
+      "id": "6c39fae1-4fab-463c-94bf-7467c31b7526",
+      "name": "Generate Formatted Message",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -1600,
+        -96
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "content": "## Proxmox Monitoring Workflow\n\nMonitors your Proxmox VE server every 15 minutes and sends automated reports via Telegram.\n\nTracks VM status, host resources, temperature sensors, and recently stopped VMs.",
+        "height": 180,
+        "width": 380
+      },
+      "id": "b65601d8-b453-49ff-9e59-9e02541d6e91",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -3312,
+        -432
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## CONFIGURATION REQUIRED\n\n1. Set your Proxmox IP, port, and node name\n2. Enter Proxmox username (with realm, e.g. root@pam)\n3. Add your Proxmox password\n4. Set your Slack Chat ID\n\nRequires: lm-sensors installed on Proxmox host",
+        "height": 292,
+        "width": 320
+      },
+      "id": "6e500725-e290-441d-b442-f6ffe70f40bf",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2912,
+        -48
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Authentication Flow\n\nLogs into Proxmox API to obtain:\n- Session ticket (valid 15 minutes)\n- CSRF prevention token\n\nBoth are required for subsequent API calls",
+        "height": 204,
+        "width": 300
+      },
+      "id": "1a38382b-0fc8-4613-89e8-8ee830cb9e01",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2560,
+        -464
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Data Collection\n\nGathers data from Proxmox API:\n- VM list and status\n- Recent task log (stop/shutdown events)\n- Node resources (CPU, memory, uptime)\n\nRuns sequentially to ensure authenticated requests",
+        "height": 272,
+        "width": 300
+      },
+      "id": "8051eb1a-7667-448f-ab90-f8b3674eb19a",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2224,
+        160
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## SSH Temperature Check\n\nConnects via SSH to read temperature sensors using the sensors command.\n\nRequires SSH Password credential configured with your Proxmox host details.",
+        "height": 220,
+        "width": 300
+      },
+      "id": "5aff2b1c-0c03-4d3c-a75d-df6c45c311f1",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1952,
+        -464
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Data Processing\n\nAnalyzes all collected data:\n- Counts running/stopped VMs\n- Detects VMs stopped in last 15 minutes\n- Calculates resource usage percentages\n- Evaluates temperature thresholds\n- Formats uptime statistics\n\nGenerates structured report with HTML formatting for Telegram",
+        "height": 264,
+        "width": 320
+      },
+      "id": "b6b3e523-97d9-47bf-a2bf-af6f4787a0af",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1488,
+        -576
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Slack CONFIGURATION\n\n1. Create bot via @BotFather\n2. Get bot token and add as credential\n3. Chat ID already set in Set Variables node\n\nMessages use HTML parse mode for formatting",
+        "height": 256,
+        "width": 300
+      },
+      "id": "7ed8b475-6ac2-4cf6-93c3-bd413815c34d",
+      "name": "Sticky Note6",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -896,
+        -368
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0A5C8T406B",
+          "mode": "list",
+          "cachedResultName": "max"
+        },
+        "messageType": "block",
+        "blocksUi": "={{ $json.blocks }}",
+        "text": "={{ $json.text }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        -848,
+        32
+      ],
+      "id": "a1539d8d-ad15-4190-9a0b-5fdd06717fa8",
+      "name": "Send a message",
+      "webhookId": "6a57e655-d845-4d18-bc8c-0afaa2ccfb95",
+      "credentials": {
+        "slackApi": {
+          "id": "nlPxZc9cb9pNlLkm",
+          "name": "Slack bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "you are an ai agent that monitor the lab servers and make sure everything is running fine,\nuse the credentials to get into each server to check and report back ",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -1344,
+        144
+      ],
+      "id": "97142b8d-0062-469a-a33d-b2b313b48207",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -1376,
+        368
+      ],
+      "id": "ad0da7ad-41c6-4f68-8d32-c461b770890d",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "DC4QtYdNnFa0tsE2",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "2abe1ab2-f2ec-4b9e-bbd7-7483d66a5ef4",
+      "name": "Schedule Every 1 Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        -3024,
+        -224
+      ],
+      "typeVersion": 1.1
+    }
+  ],
+  "connections": {
+    "Prepare Auth": {
+      "main": [
+        [
+          {
+            "node": "API - VM List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Data": {
+      "main": [
+        [
+          {
+            "node": "Generate Formatted Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API - VM List": {
+      "main": [
+        [
+          {
+            "node": "API - Node Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Proxmox Login": {
+      "main": [
+        [
+          {
+            "node": "Prepare Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Variables": {
+      "main": [
+        [
+          {
+            "node": "Proxmox Login",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API - Node Tasks": {
+      "main": [
+        [
+          {
+            "node": "API - Node Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API - Node Status": {
+      "main": [
+        [
+          {
+            "node": "SSH - Get Sensors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SSH - Get Sensors": {
+      "main": [
+        [
+          {
+            "node": "Process Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Formatted Message": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        []
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Every 1 Hour": {
+      "main": [
+        [
+          {
+            "node": "Set Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "679f19ba-6df4-4836-82a3-3fedf398f123",
+  "activeVersionId": null,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2025-12-28T03:45:57.382Z",
+      "createdAt": "2025-12-28T03:45:57.382Z",
+      "role": "workflow:owner",
+      "workflowId": "24gjbFgEvBGtGSeC",
+      "projectId": "728hRCi3Wf7il0Xj"
+    }
+  ],
+  "activeVersion": null,
+  "tags": []
+}
