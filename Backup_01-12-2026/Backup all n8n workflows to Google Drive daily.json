@@ -1,0 +1,379 @@
+{
+  "updatedAt": "2026-01-11T06:31:31.469Z",
+  "createdAt": "2025-12-29T02:20:21.715Z",
+  "id": "UskPYTEsxOt1Jojk",
+  "name": "Backup all n8n workflows to Google Drive daily",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "0afe2135-96c0-484c-bb8e-4de64da7672f",
+      "name": "On clicking 'execute'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "filters": {},
+        "requestOptions": {}
+      },
+      "id": "1a1d1200-87c0-4c4e-b8f3-2ebc1b7163b3",
+      "name": "n8n",
+      "type": "n8n-nodes-base.n8n",
+      "position": [
+        368,
+        128
+      ],
+      "retryOnFail": true,
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "credentials": {
+        "n8nApi": {
+          "id": "NmI0T5DT7z1sZJu8",
+          "name": "n8n account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "e4e6fbaf-6cec-40f2-9cdd-1b029dc280f1",
+      "name": "Loop Over Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [
+        560,
+        128
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "=Workflow Backups {{ $now.format('cccc t dd-MM-yyyy') }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1XCt9GAkpGWCMa9LE-o2BF5VqOpYOTb6p",
+          "mode": "list",
+          "cachedResultName": "n8n Workflow Backups",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1XCt9GAkpGWCMa9LE-o2BF5VqOpYOTb6p"
+        },
+        "options": {}
+      },
+      "id": "6fc313af-b104-4e0e-9d04-eec98f6fb244",
+      "name": "create new folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        192,
+        128
+      ],
+      "typeVersion": 3,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "iJwKHeAjUC3sH5BT",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "options": {
+          "format": true,
+          "fileName": "={{ $json.name + \".json\" }} "
+        }
+      },
+      "id": "dd8dd5fa-49dc-4174-9791-f1d26b042edb",
+      "name": "Convert to File",
+      "type": "n8n-nodes-base.convertToFile",
+      "position": [
+        784,
+        224
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Loop Over Items').item.json.name + \".json\" }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('create new folder').item.json.id }}"
+        },
+        "options": {}
+      },
+      "id": "ffb535c1-2d56-4197-8289-730f1a8694da",
+      "name": "Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        960,
+        224
+      ],
+      "typeVersion": 3,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "iJwKHeAjUC3sH5BT",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 1
+            }
+          ]
+        }
+      },
+      "id": "4a832caf-c8a8-49e4-be94-346d5f0d2133",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        0,
+        272
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": false,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "538fc29d-2693-4c62-9848-bdcaf8566909",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              },
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "={{ $('create new folder').item.json.id }}"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "id": "53ca9212-fac8-4d0e-810e-ead68de9ea43",
+      "name": "Filter",
+      "type": "n8n-nodes-base.filter",
+      "position": [
+        960,
+        32
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "operation": "deleteFolder",
+        "folderNoRootId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {
+          "deletePermanently": true
+        }
+      },
+      "id": "242e8fad-6c36-4a60-905d-c0e30ffbb176",
+      "name": "delete folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        1152,
+        32
+      ],
+      "typeVersion": 3,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "iJwKHeAjUC3sH5BT",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "1XCt9GAkpGWCMa9LE-o2BF5VqOpYOTb6p",
+            "mode": "list",
+            "cachedResultName": "n8n Workflow Backups",
+            "cachedResultUrl": "https://drive.google.com/drive/folders/1XCt9GAkpGWCMa9LE-o2BF5VqOpYOTb6p"
+          }
+        },
+        "options": {}
+      },
+      "id": "41c966fd-e7cd-4df8-9ba8-cce0e4694d51",
+      "name": "Get folders",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        784,
+        32
+      ],
+      "typeVersion": 3,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "iJwKHeAjUC3sH5BT",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "n8n": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "delete folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get folders": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Get folders",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "create new folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create new folder": {
+      "main": [
+        [
+          {
+            "node": "n8n",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On clicking 'execute'": {
+      "main": [
+        [
+          {
+            "node": "create new folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "9a6242c6-800d-4b84-a92b-6c87c3dedc95",
+  "activeVersionId": null,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2025-12-29T02:20:21.729Z",
+      "createdAt": "2025-12-29T02:20:21.729Z",
+      "role": "workflow:owner",
+      "workflowId": "UskPYTEsxOt1Jojk",
+      "projectId": "728hRCi3Wf7il0Xj"
+    }
+  ],
+  "activeVersion": null,
+  "tags": []
+}
