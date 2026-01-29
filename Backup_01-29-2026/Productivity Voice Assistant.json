@@ -1,0 +1,521 @@
+{
+  "updatedAt": "2026-01-12T20:17:35.000Z",
+  "createdAt": "2025-12-12T06:16:38.707Z",
+  "id": "Mz9BNMxoMVq7NEy0",
+  "name": "Productivity Voice Assistant",
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {
+        "trigger": [
+          "message"
+        ],
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {}
+      },
+      "id": "slack-trigger",
+      "name": "Slack Trigger",
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "position": [
+        224,
+        64
+      ],
+      "webhookId": "6714b1c5-1cdb-4a61-9c79-c7a11eee205b"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "audio-check",
+              "leftValue": "={{ $json.files && $json.files.length > 0 && $json.files[0].mimetype && $json.files[0].mimetype.includes('audio') }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        }
+      },
+      "id": "check-audio",
+      "name": "Check for Audio File",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "audio-binary",
+              "name": "audioFile",
+              "value": "={{ $json.files[0].data }}",
+              "type": "string"
+            },
+            {
+              "id": "channel-id",
+              "name": "slackChannel",
+              "value": "={{ $json.channel }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-audio",
+      "name": "Extract Audio Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        688,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/transcriptions",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file"
+            },
+            {
+              "name": "model",
+              "value": "whisper-1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "transcribe",
+      "name": "Transcribe Audio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        912,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4"
+            },
+            {
+              "name": "messages",
+              "value": "={{ [{role: 'system', content: 'You are a productivity assistant. Analyze the transcript and determine if it should go to: TRELLO (project tasks), CALENDAR (scheduling/time blocks), or TODOIST (quick personal tasks). Respond with JSON only: {\"tool\": \"trello|calendar|todoist\", \"title\": \"...\", \"description\": \"...\", \"due_date\": \"...\", \"duration\": 60}'}, {role: 'user', content: $json.text}] }}"
+            },
+            {
+              "name": "response_format",
+              "value": "={{ {type: 'json_object'} }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "analyze-gpt",
+      "name": "Analyze with GPT-4",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = JSON.parse($input.item.json.choices[0].message.content);\nconst channel = $('Extract Audio Data').item.json.slackChannel;\n\nreturn {\n  json: {\n    tool: response.tool,\n    title: response.title,\n    description: response.description || '',\n    due_date: response.due_date || 'today',\n    duration: response.duration || 60,\n    slackChannel: channel\n  }\n};"
+      },
+      "id": "parse-json",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "outputKey": "trello",
+              "renameOutput": true,
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{ $json.tool }}",
+                    "operation": "equals",
+                    "value2": "trello"
+                  }
+                ],
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                }
+              }
+            },
+            {
+              "outputKey": "calendar",
+              "renameOutput": true,
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{ $json.tool }}",
+                    "operation": "equals",
+                    "value2": "calendar"
+                  }
+                ],
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                }
+              }
+            },
+            {
+              "outputKey": "todoist",
+              "renameOutput": true,
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{ $json.tool }}",
+                    "operation": "equals",
+                    "value2": "todoist"
+                  }
+                ],
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                }
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "route-switch",
+      "name": "Route to Service",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1536,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "boardId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "listId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "name": "={{ $json.title }}",
+        "additionalFields": {
+          "description": "={{ $json.description }}"
+        }
+      },
+      "id": "trello-card",
+      "name": "Create Trello Card",
+      "type": "n8n-nodes-base.trello",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "event",
+        "operation": "create",
+        "calendarId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "subject": "={{ $json.title }}",
+        "additionalFields": {}
+      },
+      "id": "calendar-event",
+      "name": "Create Calendar Event",
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        432
+      ],
+      "webhookId": "a7fe214b-7754-4ffc-b417-ca65b35cacde"
+    },
+    {
+      "parameters": {
+        "project": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "content": "={{ $json.title }}",
+        "options": {
+          "description": "={{ $json.description }}",
+          "dueString": "={{ $json.due_date }}"
+        }
+      },
+      "id": "todoist-task",
+      "name": "Create Todoist Task",
+      "type": "n8n-nodes-base.todoist",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Parse Response').item.json.slackChannel }}"
+        },
+        "text": "=✅ *Trello Card Created*\n\n🎯 {{ $json.name }}\n\n🔗 {{ $json.shortUrl }}",
+        "otherOptions": {}
+      },
+      "id": "notify-trello",
+      "name": "Notify Trello Success",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        2032,
+        816
+      ],
+      "webhookId": "6e04c69c-d89a-4999-b748-4aa16140b79d"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Parse Response').item.json.slackChannel }}"
+        },
+        "text": "=✅ *Calendar Event Created*\n\n📅 {{ $json.subject }}\n\n🔗 {{ $json.webLink }}",
+        "otherOptions": {}
+      },
+      "id": "notify-calendar",
+      "name": "Notify Calendar Success",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        2032,
+        432
+      ],
+      "webhookId": "b78cdf71-d9bb-4af3-89fe-354fe4d1bfb9"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Parse Response').item.json.slackChannel }}"
+        },
+        "text": "=✅ *Todoist Task Created*\n\n✔️ {{ $json.content }}\n\n🔗 {{ $json.url }}",
+        "otherOptions": {}
+      },
+      "id": "notify-todoist",
+      "name": "Notify Todoist Success",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        2032,
+        640
+      ],
+      "webhookId": "64ec50a5-0a2a-462b-bfe8-0822376348da"
+    }
+  ],
+  "connections": {
+    "Slack Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check for Audio File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Audio File": {
+      "main": [
+        [
+          {
+            "node": "Extract Audio Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Audio Data": {
+      "main": [
+        [
+          {
+            "node": "Transcribe Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe Audio": {
+      "main": [
+        [
+          {
+            "node": "Analyze with GPT-4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze with GPT-4": {
+      "main": [
+        [
+          {
+            "node": "Parse Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Response": {
+      "main": [
+        [
+          {
+            "node": "Route to Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route to Service": {
+      "main": [
+        [
+          {
+            "node": "Create Trello Card",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Todoist Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Trello Card": {
+      "main": [
+        [
+          {
+            "node": "Notify Trello Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Notify Calendar Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Todoist Task": {
+      "main": [
+        [
+          {
+            "node": "Notify Todoist Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "d4c42fe8-911c-4be2-9a35-f8758e64fee3",
+  "activeVersionId": null,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2025-12-12T06:16:38.714Z",
+      "createdAt": "2025-12-12T06:16:38.714Z",
+      "role": "workflow:owner",
+      "workflowId": "Mz9BNMxoMVq7NEy0",
+      "projectId": "728hRCi3Wf7il0Xj"
+    }
+  ],
+  "activeVersion": null,
+  "tags": []
+}
