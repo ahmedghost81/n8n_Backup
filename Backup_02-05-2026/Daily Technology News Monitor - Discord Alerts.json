@@ -1,0 +1,496 @@
+{
+  "updatedAt": "2026-01-12T20:26:54.099Z",
+  "createdAt": "2025-12-21T06:54:20.911Z",
+  "id": "fxQ4SKrDeIsJ6UFb",
+  "name": "Daily Technology News Monitor - Discord Alerts",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a professional technology news curator writing a daily digest for Discord.\n\nYour task: Create a concise, well-organized summary of today's top tech news stories.\n\nFormat Requirements:\n📰 Use clear section headers\n🔹 Each story gets ONE sentence summary (max 2 sentences for major news)\n🔗 Include the source link\n📅 Group by topic if possible (Security, AI, Hardware, etc.)\n\nSource Data:\nTitles: {{ $json.concatenated_title }}\nLinks: {{ $json.concatenated_link }}\nContent: {{ $json.content }}\n\nCreate an engaging digest that's easy to scan!",
+        "options": {
+          "systemMessage": "You are an expert technology journalist who excels at distilling complex tech news into clear, actionable summaries. Focus on what matters most to readers. Always cite sources and maintain objectivity."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        432,
+        64
+      ],
+      "id": "0251dcae-b502-433d-98c6-86f7c025351c",
+      "name": "AI Agent",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:3b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        112,
+        304
+      ],
+      "id": "b35c4450-8b75-44bf-abba-92075b5e0ae6",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "DC4QtYdNnFa0tsE2",
+          "name": "Ollama account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -576,
+        -176
+      ],
+      "id": "1425e827-7549-4b2f-b43e-cb4774e54c7f",
+      "name": "Schedule Trigger",
+      "retryOnFail": true,
+      "alwaysOutputData": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=🗞️ **Daily Technology News Digest**\n📅 {{ $now.toFormat('MMMM dd, yyyy') }}\n\n{{ $json.output }}\n\n---\n_Powered by n8n automation • Sources: BleepingComputer, Krebs on Security, Microsoft Research_",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        960,
+        64
+      ],
+      "id": "3b9e8d50-4822-48e2-90f9-a45a14e4165e",
+      "name": "Discord1",
+      "webhookId": "7e11d8e5-d7d8-4193-88b7-cc95a54bce0f",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "hgcOrX89QPxaQSBC",
+          "name": "Discord Webhook TechChannel"
+        }
+      },
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        208,
+        -256
+      ],
+      "id": "d60a063f-68f1-4735-9217-624aed461172",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "url": "https://www.bleepingcomputer.com/feed/",
+        "options": {
+          "customFields": ""
+        }
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -304,
+        -336
+      ],
+      "id": "3b732715-e177-435d-81da-3a972ef0d721",
+      "name": "RSS Read-bleepingcomputer",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://krebsonsecurity.com/feed/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -304,
+        -176
+      ],
+      "id": "87040400-90da-46c5-954f-03a66e7777be",
+      "name": "RSS Read-krebsonsecurity",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "http://www.microsoft.com/en-us/research/feed/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -304,
+        0
+      ],
+      "id": "ff4c4697-2499-4af3-9f93-ae4a05865947",
+      "name": "RSS Read/Microsoft",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "aggregation": "concatenate",
+              "field": "title",
+              "separateBy": ", "
+            },
+            {
+              "aggregation": "concatenate",
+              "field": "link",
+              "separateBy": ", "
+            },
+            {
+              "field": "content"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        -160
+      ],
+      "id": "e9873b66-dd6b-4fa3-90cf-6e853561ec9b",
+      "name": "Summarize",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7ff7a23b-8361-4cb9-99ba-c9404ab6a68b",
+              "leftValue": "={{ $json.pubDate }}",
+              "rightValue": "={{ $now.minus({ hours: 12 }).toISO() }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "before"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "f31a50c4-999c-49b4-83e0-647f24fcfe1a",
+      "name": "12 Hr Filter"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=🗞️ \n📅 {{ $now.toFormat('MMMM dd, yyyy') }}\n📰{{ $('Merge').item.json.title }}\n🔗{{ $('Merge').item.json.link }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        480,
+        -352
+      ],
+      "id": "8711bee6-46bd-4c20-b5f0-27e75742453f",
+      "name": "Discord/Tech-Channel",
+      "webhookId": "7e11d8e5-d7d8-4193-88b7-cc95a54bce0f",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "hgcOrX89QPxaQSBC",
+          "name": "Discord Webhook TechChannel"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=📅 {{ $now.toFormat('MMMM dd, yyyy') }}\n🗞️ {{ $('RSS Read/Microsoft').item.json.title }}\n📰{{ $('RSS Read/Microsoft').item.json.title }}\n🔗{{ $('RSS Read/Microsoft').item.json.link }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        112,
+        0
+      ],
+      "id": "d97b2232-aedb-4315-86af-4b2043d70fba",
+      "name": "Discord/MS-Channel",
+      "webhookId": "7e11d8e5-d7d8-4193-88b7-cc95a54bce0f",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "i5bJIDu8t6NSzLk4",
+          "name": "Discord Webhook MSChannel"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7ff7a23b-8361-4cb9-99ba-c9404ab6a68b",
+              "leftValue": "={{ $json.pubDate }}",
+              "rightValue": "={{ $now.minus({ hours: 24 }).toISO() }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "before"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -80,
+        -336
+      ],
+      "id": "ad31840a-41f3-4445-a6dc-20372c880af9",
+      "name": "12Hr Filter"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7ff7a23b-8361-4cb9-99ba-c9404ab6a68b",
+              "leftValue": "={{ $json.pubDate }}",
+              "rightValue": "={{ $now.minus({ hours: 12 }).toISO() }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "before"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -80,
+        -176
+      ],
+      "id": "25a5aa77-06fb-4fdf-9040-02be91f14bf4",
+      "name": "12 Hr Filter1"
+    }
+  ],
+  "connections": {
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "RSS Read-krebsonsecurity",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read-bleepingcomputer",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read/Microsoft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Summarize",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Discord/Tech-Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Discord1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read-bleepingcomputer": {
+      "main": [
+        [
+          {
+            "node": "12Hr Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read-krebsonsecurity": {
+      "main": [
+        [
+          {
+            "node": "12 Hr Filter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read/Microsoft": {
+      "main": [
+        [
+          {
+            "node": "12 Hr Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12 Hr Filter": {
+      "main": [
+        [
+          {
+            "node": "Discord/MS-Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12 Hr Filter1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "12Hr Filter": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "6882a173-16ef-4628-a33e-9fb9463144d3",
+  "activeVersionId": null,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2025-12-21T06:54:20.936Z",
+      "createdAt": "2025-12-21T06:54:20.936Z",
+      "role": "workflow:owner",
+      "workflowId": "fxQ4SKrDeIsJ6UFb",
+      "projectId": "728hRCi3Wf7il0Xj"
+    }
+  ],
+  "activeVersion": null,
+  "tags": []
+}
